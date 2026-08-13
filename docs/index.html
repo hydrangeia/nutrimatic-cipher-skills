@@ -120,6 +120,7 @@
     <div class="btnrow">
       <button id="identifyBtn">🔎 Auto-identify</button>
       <button class="ghost" id="tryAllBtn">🎲 Try common decodes</button>
+      <button class="ghost" id="shareBtn">🔗 Share link</button>
       <button class="ghost" id="clearBtn">Clear</button>
     </div>
     <pre class="out" id="identOut"></pre>
@@ -142,14 +143,18 @@
         <div id="encWrap" style="display:none"><span class="chk"><input type="checkbox" id="enc"> encrypt (default: decrypt)</span></div>
       </div>
     </div>
-    <div class="btnrow"><button id="runBtn">▶ Run</button></div>
+    <div class="btnrow"><button id="runBtn">▶ Run</button>
+      <button class="ghost" id="chainBtn">⤵ Use output as input</button></div>
     <pre class="out" id="out"></pre>
   </div>
 
   <div class="card">
     <h2>Emoji search</h2>
-    <p class="hint">Pattern-match official Unicode emoji names (1,867 emoji). Use <code>*</code> and <code>?</code> as wildcards — e.g. <code>*face*</code>, <code>*cat*</code>, <code>red *</code>. Click any result to copy it.</p>
-    <input id="emojiQuery" placeholder="*heart*">
+    <p class="hint">Pattern-match official Unicode emoji names (1,867 emoji), wildcards <code>*</code> / <code>?</code> (e.g. <code>*face*</code>). <strong>Reverse lookup:</strong> paste an emoji to get its name. Each result shows its name; click to copy the emoji.</p>
+    <div class="nmwrap">
+      <input id="emojiQuery" placeholder="*heart*  ·  or paste 🦑 to get its name">
+      <span class="chk"><input type="checkbox" id="emojiWW"> whole word</span>
+    </div>
     <div id="emojiStats" class="hint" style="margin:10px 0 0"></div>
     <div id="emojiGrid" class="emoji-grid"></div>
   </div>
@@ -463,20 +468,51 @@ function tryCommon(text){
 }
 $("tryAllBtn").addEventListener("click",()=>{ $("out").textContent=tryCommon($("input").value); });
 
-// ---- emoji name search --------------------------------------------------
-function globToRe(q){ const esc=q.replace(/[.+^${}()|[\]\\]/g,"\\$&").replace(/\*/g,".*").replace(/\?/g,"."); return new RegExp(esc,"i"); }
-function emojiSearch(q){
-  const grid=$("emojiGrid"), stats=$("emojiStats"); q=q.trim();
-  if(!q){ grid.innerHTML=""; stats.textContent=""; return; }
-  let re; try{ re=globToRe(q); }catch(e){ stats.textContent="bad pattern"; grid.innerHTML=""; return; }
-  const data=window.EMOJI||[];
-  const m=data.filter(([,n])=>re.test(n)).sort((a,b)=>a[1]<b[1]?-1:1);
-  stats.innerHTML = m.length ? `<strong>${m.length}</strong> emoji matched`+(m.length>400?" · showing first 400":"") : "no match";
-  grid.innerHTML = m.slice(0,400).map(([e,n])=>`<div class="emoji-chip" data-e="${e}"><span class="ch">${e}</span><span class="nm">${n}</span></div>`).join("");
+// ---- emoji name search (+ reverse lookup + whole-word) ------------------
+const EMOJI_MAP=Object.fromEntries((window.EMOJI||[]).map(([e,n])=>[e,n]));
+function emojiRe(q,ww){ const core=q.replace(/[.+^${}()|[\]\\]/g,"\\$&").replace(/\*/g,".*").replace(/\?/g,".");
+  return new RegExp(ww?("\\b"+core+"\\b"):core,"i"); }
+function renderEmoji(list,label){ const grid=$("emojiGrid"), stats=$("emojiStats");
+  stats.innerHTML = list.length ? `<strong>${list.length}</strong> ${label}`+(list.length>400?" · showing first 400":"") : "no match";
+  grid.innerHTML = list.slice(0,400).map(([e,n])=>`<div class="emoji-chip" data-e="${e}"><span class="ch">${e}</span><span class="nm">${n}</span></div>`).join("");
   [...grid.children].forEach(c=>c.addEventListener("click",()=>{ copyText(c.dataset.e);
     c.classList.add("copied"); setTimeout(()=>c.classList.remove("copied"),900); }));
 }
+function emojiSearch(q){ const grid=$("emojiGrid"), stats=$("emojiStats"); q=q.trim();
+  if(!q){ grid.innerHTML=""; stats.textContent=""; return; }
+  // reverse lookup: if the query contains actual emoji present in the DB, name them
+  const rev=[...q].filter(ch=>EMOJI_MAP[ch]).map(ch=>[ch,EMOJI_MAP[ch]]);
+  if(rev.length){ renderEmoji(rev,"emoji → name (reverse lookup)"); return; }
+  let re; try{ re=emojiRe(q,$("emojiWW").checked); }catch(e){ stats.textContent="bad pattern"; grid.innerHTML=""; return; }
+  const m=(window.EMOJI||[]).filter(([,n])=>re.test(n)).sort((a,b)=>a[1]<b[1]?-1:1);
+  renderEmoji(m,"emoji matched");
+}
 $("emojiQuery").addEventListener("input",()=>emojiSearch($("emojiQuery").value));
+$("emojiWW").addEventListener("change",()=>emojiSearch($("emojiQuery").value));
+
+// ---- chain: send output back into input ---------------------------------
+$("chainBtn").addEventListener("click",()=>{ const o=$("out").textContent.trim();
+  if(o && o!=="✓ copied"){ $("input").value=o; $("input").focus(); saveState(); } });
+
+// ---- shareable state (URL hash) + remember last session -----------------
+function getState(){ return {t:$("input").value,op:opSel.value,key:$("key").value,num:$("num").value,
+  dir:$("dir").value,enc:$("enc").checked,eq:$("emojiQuery").value,ww:$("emojiWW").checked}; }
+function setState(s){ if(!s) return;
+  if(s.t!=null)$("input").value=s.t; if(s.op){opSel.value=s.op;showParams();}
+  if(s.key!=null)$("key").value=s.key; if(s.num!=null)$("num").value=s.num;
+  if(s.dir)$("dir").value=s.dir; if(s.enc!=null)$("enc").checked=s.enc;
+  if(s.eq!=null)$("emojiQuery").value=s.eq; if(s.ww!=null)$("emojiWW").checked=s.ww; }
+function saveState(){ try{ localStorage.setItem("pct",JSON.stringify(getState())); }catch(e){} }
+["input","key","num","dir","enc","emojiQuery","emojiWW"].forEach(id=>{ const el=$(id);
+  el.addEventListener(el.type==="checkbox"?"change":"input",saveState); });
+opSel.addEventListener("change",saveState);
+$("shareBtn").addEventListener("click",()=>{
+  const url=location.origin+location.pathname+"#s="+encodeURIComponent(JSON.stringify(getState()));
+  copyText(url); const b=$("shareBtn"), t=b.textContent; b.textContent="✓ link copied"; setTimeout(()=>b.textContent=t,1000); });
+(function restore(){ let s=null;
+  if(location.hash.indexOf("#s=")===0){ try{ s=JSON.parse(decodeURIComponent(location.hash.slice(3))); }catch(e){} }
+  if(!s){ try{ s=JSON.parse(localStorage.getItem("pct")); }catch(e){} }
+  if(s){ setState(s); emojiSearch($("emojiQuery").value); } })();
 </script>
 </body>
 </html>

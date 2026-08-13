@@ -6,6 +6,17 @@ Puzzle-hunt "crank-turning" tools, packaged as two [Claude Code](https://docs.cl
 
 ---
 
+## 🌐 Web version / 网页版
+
+No install, works in any browser — **[puzzle.hydrangeasuisui.com](https://puzzle.hydrangeasuisui.com)**
+(also `hydrangeia.github.io/nutrimatic-cipher-skills`). Everything runs client-side; nothing
+is sent anywhere. Features: auto-identify, one-click "try common decodes", all cipher
+operations grouped by family, **emoji name search + reverse lookup** (1,867 Unicode emoji),
+a Nutrimatic query-link builder, shareable decode links, and light/dark auto.
+零安装，浏览器直接用，全部本地运行。含分诊、一键常见解码、全部密码操作、emoji 正反查、分享链接。
+
+---
+
 ## What's inside / 里面有什么
 
 ### 1. `nutrimatic` — word/phrase shape search
