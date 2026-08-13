@@ -2,7 +2,7 @@
 
 Puzzle-hunt "crank-turning" tools, packaged as two [Claude Code](https://docs.claude.com/en/docs/claude-code) skills — but the cipher toolkit also runs as a plain Python CLI with **zero dependencies**, so teammates who don't use Claude can still use it.
 
-给 puzzle hunt 用的"摇曲柄"工具，打包成两个 Claude Code skill。密码工具箱也可当**纯 Python 命令行**用，零依赖，不装 Claude 也能跑。
+
 
 ---
 
