@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Cipher Toolkit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%90%3C/text%3E%3C/svg%3E">
+
 <style>
   :root{
     --bg:#f4f5fb; --bg2:#eceef6; --panel:#ffffff; --inset:#0f1320; --insetfg:#d7f7e8;
@@ -85,6 +87,16 @@
   .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:26px;line-height:1.7}
   .nmwrap{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .nmwrap input{flex:1 1 240px}
+  pre.out{cursor:copy}
+  .emoji-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .emoji-chip{display:flex;flex-direction:column;align-items:center;gap:5px;width:92px;padding:10px 6px;
+    background:var(--bg);border:1px solid var(--border2);border-radius:10px;cursor:pointer;position:relative;
+    transition:border-color .12s, transform .08s}
+  .emoji-chip:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .emoji-chip .ch{font-size:26px;line-height:1}
+  .emoji-chip .nm{font-size:10px;color:var(--muted);text-align:center;line-height:1.25;word-break:break-word}
+  .emoji-chip.copied{border-color:var(--teal)}
+  .emoji-chip.copied::after{content:"copied";position:absolute;top:3px;right:4px;font-size:8.5px;color:var(--teal);font-weight:700}
 </style>
 </head>
 <body>
@@ -97,6 +109,7 @@
       <span class="pill">Affine</span><span class="pill">Playfair</span><span class="pill">Columnar</span>
       <span class="pill">Morse</span><span class="pill">Baconian</span><span class="pill">Polybius / Tap</span>
       <span class="pill">Rail fence</span><span class="pill">A1Z26</span><span class="pill">Base64 / Hex / Bin</span>
+      <span class="pill">Emoji search</span>
     </div>
   </header>
 
@@ -106,6 +119,7 @@
     <textarea id="input" placeholder="Paste the mystery string here…">PBATENGHYNGVBAF LBH SBHAQ GUR XRL</textarea>
     <div class="btnrow">
       <button id="identifyBtn">🔎 Auto-identify</button>
+      <button class="ghost" id="tryAllBtn">🎲 Try common decodes</button>
       <button class="ghost" id="clearBtn">Clear</button>
     </div>
     <pre class="out" id="identOut"></pre>
@@ -133,6 +147,14 @@
   </div>
 
   <div class="card">
+    <h2>Emoji search</h2>
+    <p class="hint">Pattern-match official Unicode emoji names (1,867 emoji). Use <code>*</code> and <code>?</code> as wildcards — e.g. <code>*face*</code>, <code>*cat*</code>, <code>red *</code>. Click any result to copy it.</p>
+    <input id="emojiQuery" placeholder="*heart*">
+    <div id="emojiStats" class="hint" style="margin:10px 0 0"></div>
+    <div id="emojiGrid" class="emoji-grid"></div>
+  </div>
+
+  <div class="card">
     <h2>Nutrimatic query link</h2>
     <p class="hint">Type a Nutrimatic pattern (e.g. <code>"CVCVCVCVCV"</code> or <code>&lt;listen&gt;</code>) to build its search URL. Nutrimatic itself runs on nutrimatic.org.</p>
     <div class="nmwrap">
@@ -145,6 +167,7 @@
     Source &amp; the Claude Code skills: <a href="https://github.com/hydrangeia/nutrimatic-cipher-skills">github.com/hydrangeia/nutrimatic-cipher-skills</a></p>
 </div>
 
+<script src="emoji-data.js"></script>
 <script>
 "use strict";
 // ---- English scoring ----------------------------------------------------
@@ -418,6 +441,42 @@ $("identifyBtn").addEventListener("click",()=>{ $("identOut").textContent=identi
 $("clearBtn").addEventListener("click",()=>{ $("input").value=""; $("out").textContent=""; $("identOut").textContent=""; });
 function updNm(){ const p=$("nm").value.trim(); $("nmLink").href = p? "https://nutrimatic.org/2024/?q="+encodeURIComponent(p) : "https://nutrimatic.org/2024/"; }
 $("nm").addEventListener("input",updNm); updNm();
+
+// ---- click-to-copy on output panels -------------------------------------
+function copyText(t){ if(t && navigator.clipboard) navigator.clipboard.writeText(t).catch(()=>{}); }
+[$("out"),$("identOut")].forEach(el=>{ el.title="click to copy";
+  el.addEventListener("click",()=>{ const t=el.textContent.trim(); if(!t) return; copyText(t);
+    const prev=el.dataset.saved; if(prev===undefined) el.dataset.saved=el.textContent;
+    const keep=el.textContent; el.textContent="✓ copied"; setTimeout(()=>{el.textContent=keep;},600); }); });
+
+// ---- one-click "try common decodes" triage ------------------------------
+function tryCommon(text){
+  const cand=[
+    ["rot13", shift(text,13)], ["atbash", atbash(text)], ["rot47", rot47(text)],
+    ["morse", morseDec(text)], ["a1z26", a1z26Dec(text)], ["base64", fromB64(text)],
+    ["hex", fromHex(text)], ["binary", fromBin(text)], ["decimal", fromDec(text)], ["t9", t9(text)],
+  ].filter(([,r])=>r && r.trim() && r!=="invalid base64");
+  const scored=cand.map(([n,r])=>{ const lc=letters(r).length; return {n,r,sc:lc>=3?chi2(r):Infinity,lc}; });
+  scored.sort((a,b)=>a.sc-b.sc);
+  const lines=scored.map(o=>`${(o.n+":").padEnd(9)}${o.r}${(o.sc<35&&o.lc>=4)?"   ★ looks like English":""}`);
+  return lines.join("\n") || "(nothing decoded cleanly — try the operations above)";
+}
+$("tryAllBtn").addEventListener("click",()=>{ $("out").textContent=tryCommon($("input").value); });
+
+// ---- emoji name search --------------------------------------------------
+function globToRe(q){ const esc=q.replace(/[.+^${}()|[\]\\]/g,"\\$&").replace(/\*/g,".*").replace(/\?/g,"."); return new RegExp(esc,"i"); }
+function emojiSearch(q){
+  const grid=$("emojiGrid"), stats=$("emojiStats"); q=q.trim();
+  if(!q){ grid.innerHTML=""; stats.textContent=""; return; }
+  let re; try{ re=globToRe(q); }catch(e){ stats.textContent="bad pattern"; grid.innerHTML=""; return; }
+  const data=window.EMOJI||[];
+  const m=data.filter(([,n])=>re.test(n)).sort((a,b)=>a[1]<b[1]?-1:1);
+  stats.innerHTML = m.length ? `<strong>${m.length}</strong> emoji matched`+(m.length>400?" · showing first 400":"") : "no match";
+  grid.innerHTML = m.slice(0,400).map(([e,n])=>`<div class="emoji-chip" data-e="${e}"><span class="ch">${e}</span><span class="nm">${n}</span></div>`).join("");
+  [...grid.children].forEach(c=>c.addEventListener("click",()=>{ copyText(c.dataset.e);
+    c.classList.add("copied"); setTimeout(()=>c.classList.remove("copied"),900); }));
+}
+$("emojiQuery").addEventListener("input",()=>emojiSearch($("emojiQuery").value));
 </script>
 </body>
 </html>
