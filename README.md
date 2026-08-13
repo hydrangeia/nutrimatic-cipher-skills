@@ -12,7 +12,8 @@ No install, works in any browser — **[puzzle.hydrangeasuisui.com](https://puzz
 (also `hydrangeia.github.io/nutrimatic-cipher-skills`). Everything runs client-side; nothing
 is sent anywhere. Features: auto-identify, one-click "try common decodes", all cipher
 operations grouped by family, **emoji name search + reverse lookup** (1,867 Unicode emoji),
-a Nutrimatic query-link builder, shareable decode links, and light/dark auto.
+a Nutrimatic query-link builder, a **word finder** (find words by meaning/rhyme/spelling via
+the free Datamuse API — the one online feature), shareable decode links, and light/dark auto.
 零安装，浏览器直接用，全部本地运行。含分诊、一键常见解码、全部密码操作、emoji 正反查、分享链接。
 
 ---
@@ -34,6 +35,11 @@ consonant/vowel shapes, and letter-drop / tile-reorder wordplay.
 Covered: Caesar / ROT13 / ROT47 / Atbash / affine (brute-force) / **Vigenère (auto-solve)** /
 simple substitution / Morse / Baconian / A1Z26 / Polybius / tap code / rail fence /
 base64 / base32 / hex / binary / decimal-ASCII / phone T9.
+
+### 3. `onelook` — find words by meaning
+Builds [OneLook](https://www.onelook.com) queries + URL for the **meaning** axis Nutrimatic
+lacks: crossword/cryptic clues, reverse dictionary, synonyms, meaning×shape combos, acrostics.
+按"意思"查词：填字/纵横线索、反向词典、同义词、意思×形状组合。Rule of thumb: 意思→OneLook，形状→Nutrimatic。
 
 ---
 

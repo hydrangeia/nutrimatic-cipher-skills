@@ -97,6 +97,11 @@
   .emoji-chip .nm{font-size:10px;color:var(--muted);text-align:center;line-height:1.25;word-break:break-word}
   .emoji-chip.copied{border-color:var(--teal)}
   .emoji-chip.copied::after{content:"copied";position:absolute;top:3px;right:4px;font-size:8.5px;color:var(--teal);font-weight:700}
+  .word-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .word-chip{display:inline-block;padding:7px 13px;background:var(--bg);border:1px solid var(--border2);
+    border-radius:999px;cursor:pointer;font-size:14px;transition:border-color .12s,transform .08s}
+  .word-chip:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .word-chip.copied{border-color:var(--teal);color:var(--teal)}
 </style>
 </head>
 <body>
@@ -109,7 +114,7 @@
       <span class="pill">Affine</span><span class="pill">Playfair</span><span class="pill">Columnar</span>
       <span class="pill">Morse</span><span class="pill">Baconian</span><span class="pill">Polybius / Tap</span>
       <span class="pill">Rail fence</span><span class="pill">A1Z26</span><span class="pill">Base64 / Hex / Bin</span>
-      <span class="pill">Emoji search</span>
+      <span class="pill">Emoji search</span><span class="pill">Word finder</span>
     </div>
   </header>
 
@@ -166,6 +171,32 @@
       <input id="nm" placeholder='"C*aC*eC*iC*oC*uC*yC*"'>
       <a id="nmLink" href="#" target="_blank" rel="noopener"><button class="ghost">↗ Open on nutrimatic.org</button></a>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Word finder <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0">· needs internet</span></h2>
+    <p class="hint">Find words by <strong>meaning</strong>, sound, rhyme, or spelling shape — great for crossword/cryptic clues. Powered by the free Datamuse API. <strong>This is the only feature that queries an external service;</strong> everything else on this page is fully offline.</p>
+    <div class="row">
+      <div style="flex:1 1 130px">
+        <label for="wfType">Find words…</label>
+        <select id="wfType">
+          <option value="ml">that mean</option>
+          <option value="rel_syn">that are synonyms of</option>
+          <option value="rel_trg">associated with</option>
+          <option value="rel_ant">that are opposites of</option>
+          <option value="rel_rhy">that rhyme with</option>
+          <option value="sl">that sound like</option>
+          <option value="sp">spelled like (? = 1 letter, * = any)</option>
+        </select>
+      </div>
+      <div style="flex:2 1 200px"><label for="wfQuery">this</label><input id="wfQuery" placeholder="e.g. reluctant"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div><label for="wfPattern">…and spelled like this (optional) — <code>?</code> one letter, <code>*</code> any</label><input id="wfPattern" placeholder="e.g. ??e?a  (leave blank for no shape filter)"></div>
+    </div>
+    <div class="btnrow"><button id="wfBtn">🔍 Find words</button></div>
+    <div id="wfStats" class="hint" style="margin:10px 0 0"></div>
+    <div id="wfGrid" class="word-grid"></div>
   </div>
 
   <p class="foot">Static &amp; client-side · served from your own domain.<br>
@@ -513,6 +544,26 @@ $("shareBtn").addEventListener("click",()=>{
   if(location.hash.indexOf("#s=")===0){ try{ s=JSON.parse(decodeURIComponent(location.hash.slice(3))); }catch(e){} }
   if(!s){ try{ s=JSON.parse(localStorage.getItem("pct")); }catch(e){} }
   if(s){ setState(s); emojiSearch($("emojiQuery").value); } })();
+
+// ---- word finder (Datamuse API — the one online feature) ----------------
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function wordFind(){
+  const q=$("wfQuery").value.trim(), type=$("wfType").value, pat=$("wfPattern").value.trim();
+  const grid=$("wfGrid"), stats=$("wfStats");
+  if(!q){ stats.textContent="enter a word or meaning above"; grid.innerHTML=""; return; }
+  let url="https://api.datamuse.com/words?max=100&"+type+"="+encodeURIComponent(q);
+  if(type!=="sp" && pat) url+="&sp="+encodeURIComponent(pat);
+  stats.textContent="searching…"; grid.innerHTML="";
+  fetch(url).then(r=>r.json()).then(data=>{
+    if(!data.length){ stats.textContent="no words found — try a different phrasing or drop the spelling filter"; return; }
+    stats.innerHTML="<strong>"+data.length+"</strong> words · click to copy";
+    grid.innerHTML=data.map(w=>`<div class="word-chip" data-w="${esc(w.word)}">${esc(w.word)}</div>`).join("");
+    [...grid.children].forEach(c=>c.addEventListener("click",()=>{ copyText(c.dataset.w);
+      c.classList.add("copied"); setTimeout(()=>c.classList.remove("copied"),900); }));
+  }).catch(()=>{ stats.textContent="⚠ couldn't reach Datamuse (needs internet; may be blocked on your network)"; });
+}
+$("wfBtn").addEventListener("click",wordFind);
+$("wfQuery").addEventListener("keydown",e=>{ if(e.key==="Enter") wordFind(); });
 </script>
 </body>
 </html>
