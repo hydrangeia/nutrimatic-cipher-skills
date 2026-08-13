@@ -76,14 +76,20 @@ or `ciphers.py list`.
 - `frombin` / `fromhex` / `frombase64` / `frombase32` — base decodes to text.
 - `t9 "44 33"` — phone multi-tap (press-count) → letters.
 
-### Grid ciphers
+### Grid / digraph ciphers
 - `polybius "23 15 ..."` — 5×5 Polybius (default alphabet drops J; `--square` for a custom
   25- or 36-cell alphabet). `--encode` to encode.
 - `tap "23 15 ..."` — tap code (5×5 grid without K; K reads as C). Digits 1–5, any spacing.
+- `playfair --key KEYWORD "text"` — Playfair digraph cipher (needs the keyword; `--encrypt`
+  to encode). Decryption leaves the padding `x`/doubled-letter artifacts for you to clean up.
 
 ### Transposition
 - `railfence --rails N "text"` — rail-fence decode (`--encode` to encode). Add `--strip`
   to ignore spaces.
+- `columnar --key KEYWORD "text"` — columnar transposition (needs the keyword; `--encrypt`
+  to encode, `--strip` to drop spaces first).
+- `keyboard --shift N --direction left|right "text"` — shift each letter to its QWERTY
+  row-neighbour (wraps within the row). Common "typed one key over" gimmick.
 
 ## Worked example
 

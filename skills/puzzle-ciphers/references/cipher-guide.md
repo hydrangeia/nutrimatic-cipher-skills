@@ -56,17 +56,20 @@ run `caesar --all` — it's free.
   distribution, seed with `e t a o` and common bigrams (`th`, `he`, `in`), pattern-match
   short words, and iterate. Feed candidate words to the `nutrimatic` skill.
 - **Columnar transposition** — plaintext written in rows under a keyword, columns read in
-  key order. If you know the width, try reading columns in different orders; anagram the
-  column blocks. Doubling (double transposition) is harder.
+  key order. **Built in when you know the keyword: `columnar --key KEYWORD`.** Without it,
+  and if you know the width, try reading columns in different orders / anagram the column
+  blocks. Doubling (double transposition) is harder.
 - **Playfair** — digraph cipher on a 5×5 keyed square. Tells: even length, no doubled
-  letters within a pair, no J. Needs the keyword; hunts usually give it or make it
-  guessable. Solve by reconstructing the square.
+  letters within a pair, no J. **Built in when you know the keyword: `playfair --key
+  KEYWORD`** (hunts usually give it or make it guessable). Without the keyword you must
+  reconstruct the square from cribs.
 - **Fractionation (Bifid / Trifid / ADFGVX)** — coordinates split and recombined. Usually
   flagged by the puzzle's theme or a given square; solve by hand with the stated key.
 - **Book / running-key** — key is a text (a given passage, page numbers). Look for the
   referenced source in the puzzle.
-- **Keyboard shifts / substitutions** — QWERTY-neighbor shifts, phone keypad, Dvorak.
-  Try mapping against a keyboard layout if letters cluster oddly.
+- **Keyboard shifts / substitutions** — QWERTY-neighbor shifts (built in:
+  `keyboard --shift N --direction left|right`), phone keypad (`t9`), Dvorak. Try mapping
+  against a keyboard layout if letters cluster oddly.
 
 When a hunt leans on one of these repeatedly, add a subcommand to `scripts/ciphers.py` —
 it's standard-library and structured for easy extension (one `cmd_*` function + one

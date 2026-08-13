@@ -455,6 +455,122 @@ def cmd_railfence(args):
 
 
 # ---------------------------------------------------------------------------
+# Playfair (needs a keyword)
+# ---------------------------------------------------------------------------
+def build_playfair(key):
+    seen = []
+    for c in (key + "abcdefghiklmnopqrstuvwxyz").lower():
+        if c == 'j':
+            c = 'i'
+        if c.isalpha() and c not in seen:
+            seen.append(c)
+    pos = {c: (i // 5, i % 5) for i, c in enumerate(seen)}
+    grid = {(i // 5, i % 5): c for i, c in enumerate(seen)}
+    return pos, grid
+
+
+def _playfair_digraphs(text, pad='x'):
+    letters = [('i' if c == 'j' else c) for c in text.lower() if c.isalpha()]
+    pairs = []
+    i = 0
+    while i < len(letters):
+        a = letters[i]
+        b = letters[i + 1] if i + 1 < len(letters) else pad
+        if a == b:
+            b = pad
+            i += 1
+        else:
+            i += 2
+        pairs.append((a, b))
+    return pairs
+
+
+def _playfair_map(text, pos, grid, step):
+    out = []
+    for a, b in _playfair_digraphs(text):
+        ra, ca = pos[a]
+        rb, cb = pos[b]
+        if ra == rb:
+            out.append(grid[(ra, (ca + step) % 5)])
+            out.append(grid[(rb, (cb + step) % 5)])
+        elif ca == cb:
+            out.append(grid[((ra + step) % 5, ca)])
+            out.append(grid[((rb + step) % 5, cb)])
+        else:
+            out.append(grid[(ra, cb)])
+            out.append(grid[(rb, ca)])
+    return ''.join(out)
+
+
+def cmd_playfair(args):
+    if not args.key:
+        sys.exit("playfair needs --key KEYWORD")
+    pos, grid = build_playfair(args.key)
+    step = 1 if args.encrypt else -1
+    print(_playfair_map(get_text(args), pos, grid, step))
+
+
+# ---------------------------------------------------------------------------
+# Columnar transposition (needs a keyword)
+# ---------------------------------------------------------------------------
+def _col_order(key):
+    """Column read order: columns sorted by (key letter, original index)."""
+    return [idx for _, idx in sorted((c, i) for i, c in enumerate(key.lower()))]
+
+
+def cmd_columnar(args):
+    if not args.key:
+        sys.exit("columnar needs --key KEYWORD")
+    text = ''.join(get_text(args).split()) if args.strip else get_text(args)
+    ncol = len(args.key)
+    order = _col_order(args.key)
+    if args.encrypt:
+        cols = [''] * ncol
+        for i, ch in enumerate(text):
+            cols[i % ncol] += ch
+        print(''.join(cols[c] for c in order))
+    else:
+        n = len(text)
+        nrow = -(-n // ncol)  # ceil
+        extra = n % ncol  # first `extra` original columns are one longer
+        col_len = {c: (nrow if (extra == 0 or c < extra) else nrow - 1) for c in range(ncol)}
+        cols, p = {}, 0
+        for c in order:
+            cols[c] = text[p:p + col_len[c]]
+            p += col_len[c]
+        out = []
+        for r in range(nrow):
+            for c in range(ncol):
+                if r < len(cols[c]):
+                    out.append(cols[c][r])
+        print(''.join(out))
+
+
+# ---------------------------------------------------------------------------
+# Keyboard shift (QWERTY row neighbours)
+# ---------------------------------------------------------------------------
+QWERTY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
+QWERTY_POS = {c: (r, i) for r, row in enumerate(QWERTY_ROWS) for i, c in enumerate(row)}
+
+
+def cmd_keyboard(args):
+    text = get_text(args)
+    d = -1 if args.direction == 'left' else 1
+    delta = d * args.shift
+    out = []
+    for c in text:
+        low = c.lower()
+        if low in QWERTY_POS:
+            r, i = QWERTY_POS[low]
+            row = QWERTY_ROWS[r]
+            m = row[(i + delta) % len(row)]
+            out.append(m.upper() if c.isupper() else m)
+        else:
+            out.append(c)
+    print(''.join(out))
+
+
+# ---------------------------------------------------------------------------
 # Bases / numeric
 # ---------------------------------------------------------------------------
 def cmd_frombin(args):
@@ -537,8 +653,8 @@ def get_text(args):
 def cmd_list(args):
     print(__doc__)
     print("Commands: caesar, rot13, rot47, atbash, affine, vigenere, substitution, freq,")
-    print("          morse, bacon, a1z26, polybius, tap, railfence, frombin, fromhex,")
-    print("          frombase64, frombase32, fromdec, t9")
+    print("          morse, bacon, a1z26, polybius, tap, railfence, playfair, columnar,")
+    print("          keyboard, frombin, fromhex, frombase64, frombase32, fromdec, t9")
 
 
 def build_parser():
@@ -604,6 +720,22 @@ def build_parser():
     sp.add_argument('--encode', action='store_true')
     sp.add_argument('--strip', action='store_true', help="strip spaces before processing")
     add_text(sp); sp.set_defaults(func=cmd_railfence)
+
+    sp = sub.add_parser('playfair', help="Playfair digraph cipher (needs --key)")
+    sp.add_argument('--key', required=True)
+    sp.add_argument('--encrypt', action='store_true')
+    add_text(sp); sp.set_defaults(func=cmd_playfair)
+
+    sp = sub.add_parser('columnar', help="columnar transposition (needs --key keyword)")
+    sp.add_argument('--key', required=True)
+    sp.add_argument('--encrypt', action='store_true')
+    sp.add_argument('--strip', action='store_true', help="strip spaces before processing")
+    add_text(sp); sp.set_defaults(func=cmd_columnar)
+
+    sp = sub.add_parser('keyboard', help="QWERTY row-neighbour shift")
+    sp.add_argument('--shift', type=int, default=1)
+    sp.add_argument('--direction', choices=['left', 'right'], default='right')
+    add_text(sp); sp.set_defaults(func=cmd_keyboard)
 
     sp = sub.add_parser('frombin', help="binary -> text"); add_text(sp); sp.set_defaults(func=cmd_frombin)
     sp = sub.add_parser('fromhex', help="hex -> text"); add_text(sp); sp.set_defaults(func=cmd_fromhex)

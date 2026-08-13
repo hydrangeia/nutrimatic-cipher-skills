@@ -74,6 +74,35 @@ Full command help: `python ciphers.py <command> -h`.
 
 ---
 
+## Demo / 实战演示
+
+Real transcripts (these exact outputs are what the tools produce):
+
+```text
+# 捡到乱码 → identify 分诊 → 按建议解
+$ python identify.py "PBATENGHYNGVBAF LBH SBHAQ GUR XRL"
+  index of coincidence: 0.0443 ... Suggestions: Caesar / ROT / Atbash ...
+$ python ciphers.py caesar --all "PBATENGHYNGVBAF LBH SBHAQ GUR XRL"
+  shift 13: CONGRATULATIONS YOU FOUND THE KEY   <-- best
+
+# Vigenère，未知密钥（需 ~150+ 字符）
+$ python ciphers.py vigenere --solve "<long ciphertext>"
+  key len 4 -> key 'hunt': in cryptography a cipher is an algorithm ...
+
+# Playfair（已知关键词）
+$ python ciphers.py playfair --key "playfair example" --encrypt "hidethegoldinthetreestump"
+  bmodzbxdnabekudmuixmmouvif
+
+# 多层套娃：base64 外层，里面是 ROT13
+$ python ciphers.py frombase64 "enJyZ25nenZxYXZ0dWc="   ->  zrrgngzvqavtug
+$ python ciphers.py caesar --all "zrrgngzvqavtug"        ->  meetatmidnight
+```
+
+Decoded plaintext is often itself the next instruction (e.g. Morse `.- -. .- --. .-. .- --`
+→ `anagram` → hand it to the `nutrimatic` skill). Chain freely.
+
+---
+
 ## Notes & limits / 说明与边界
 - Brute-force output is ranked by chi-squared distance to English — a **heuristic**.
   Eyeball the top few, especially on short strings (< ~40 letters). 结果按"像英语"排序，是启发式。
