@@ -5,72 +5,116 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puzzle Cipher Toolkit</title>
 <style>
-  :root {
-    --bg: #0f1117; --panel: #1a1d27; --panel2: #232733; --fg: #e6e8ee;
-    --muted: #9aa3b2; --accent: #6ea8fe; --accent2: #7ee0b8; --border: #2b3040;
+  :root{
+    --bg:#f4f5fb; --bg2:#eceef6; --panel:#ffffff; --inset:#0f1320; --insetfg:#d7f7e8;
+    --fg:#181d2a; --muted:#606a7e; --border:#e4e7f1; --border2:#d3d8e6;
+    --accent:#6d5efc; --accent-2:#9b8cff; --teal:#12b3a3;
+    --shadow:0 1px 2px rgba(20,25,50,.04), 0 8px 24px rgba(20,25,50,.06);
+    --radius:14px;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
-    padding: 24px 16px 60px;
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0d14; --bg2:#0f1220; --panel:#141824; --inset:#0a0c13; --insetfg:#c9f6e6;
+      --fg:#e8ebf5; --muted:#98a1b6; --border:#252b3b; --border2:#2f3648;
+      --accent:#7d6dff; --accent-2:#a99bff; --teal:#2fd2be;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
   }
-  .wrap { max-width: 900px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-          padding: 16px; margin-bottom: 16px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 4px; text-transform: uppercase; letter-spacing: .04em; }
-  textarea, input, select {
-    width: 100%; background: var(--panel2); color: var(--fg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit;
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; color:var(--fg);
+    background:
+      radial-gradient(1200px 600px at 100% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+      radial-gradient(1000px 500px at -10% 10%, color-mix(in srgb, var(--teal) 10%, transparent), transparent 55%),
+      linear-gradient(var(--bg), var(--bg2));
+    background-attachment:fixed;
+    font:15px/1.55 "Inter",-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+    padding:34px 16px 70px;
   }
-  textarea { min-height: 90px; resize: vertical; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-  .row > div { flex: 1 1 120px; }
-  .params { margin-top: 12px; }
-  .params.hidden { display: none; }
-  button {
-    background: var(--accent); color: #08111f; border: 0; border-radius: 8px;
-    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  .wrap{max-width:860px;margin:0 auto}
+  header{margin:0 0 22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{font-size:30px;line-height:1;filter:drop-shadow(0 2px 6px rgba(109,94,252,.35))}
+  h1{
+    font-size:26px;margin:0;letter-spacing:-.02em;font-weight:800;
+    background:linear-gradient(92deg,var(--accent),var(--accent-2) 55%,var(--teal));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   }
-  button.ghost { background: var(--panel2); color: var(--fg); border: 1px solid var(--border); font-weight: 500; }
-  button:hover { filter: brightness(1.08); }
-  .btnrow { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  pre.out {
-    background: #0b0d13; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
-    white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; font-family: ui-monospace, Consolas, monospace;
-    font-size: 13px; min-height: 40px; overflow-x: auto;
+  .tagline{color:var(--muted);margin:8px 0 0;font-size:13.5px}
+  .pills{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:6px}
+  .pill{font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--border);
+    border-radius:999px;padding:3px 10px;box-shadow:var(--shadow)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-size:12px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  label{display:block;font-size:11.5px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  textarea,input,select{
+    width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border2);
+    border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;transition:border-color .15s, box-shadow .15s;
   }
-  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg); }
-  .chk input { width: auto; }
-  a { color: var(--accent); }
-  .foot { color: var(--muted); font-size: 12px; text-align: center; margin-top: 24px; }
-  .pill { display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:999px;
-          padding:2px 10px; font-size:12px; color:var(--muted); margin:2px 4px 2px 0;}
-  h2 { font-size: 15px; margin: 0 0 10px; }
-  .hint { font-size:12px; color:var(--muted); margin-top:6px;}
+  textarea{min-height:96px;resize:vertical;font-family:ui-monospace,"SF Mono",Consolas,monospace;line-height:1.5}
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent)}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .row>div{flex:1 1 130px}
+  .params{margin-top:14px}
+  .params.hidden{display:none}
+  button{
+    background:linear-gradient(92deg,var(--accent),var(--accent-2));color:#fff;border:0;border-radius:10px;
+    padding:11px 18px;font-size:14px;font-weight:650;cursor:pointer;transition:transform .08s, box-shadow .15s, filter .15s;
+    box-shadow:0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  button:hover{transform:translateY(-1px);filter:brightness(1.05)}
+  button:active{transform:translateY(0)}
+  button.ghost{background:var(--panel);color:var(--fg);border:1px solid var(--border2);box-shadow:none;font-weight:550}
+  button.ghost:hover{border-color:var(--accent)}
+  .btnrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  pre.out{
+    background:var(--inset);color:var(--insetfg);border:1px solid var(--border);border-radius:10px;padding:14px;
+    white-space:pre-wrap;word-break:break-word;margin:14px 0 0;
+    font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.5;min-height:44px;overflow-x:auto;
+  }
+  pre.out:empty{display:none}
+  .chk{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--fg);height:44px}
+  .chk input{width:auto}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .hint{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+  .hint code{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:12px}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:26px;line-height:1.7}
+  .nmwrap{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .nmwrap input{flex:1 1 240px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🧩 Puzzle Cipher Toolkit</h1>
-  <p class="sub">Classic-cipher identify &amp; crack — runs entirely in your browser, nothing sent anywhere.</p>
+  <header>
+    <div class="brand"><span class="logo">🔐</span><h1>Puzzle Cipher Toolkit</h1></div>
+    <p class="tagline">Identify &amp; crack classic ciphers — everything runs locally in your browser, nothing is ever sent anywhere.</p>
+    <div class="pills">
+      <span class="pill">Caesar / ROT / Atbash</span><span class="pill">Vigenère auto-solve</span>
+      <span class="pill">Affine</span><span class="pill">Playfair</span><span class="pill">Columnar</span>
+      <span class="pill">Morse</span><span class="pill">Baconian</span><span class="pill">Polybius / Tap</span>
+      <span class="pill">Rail fence</span><span class="pill">A1Z26</span><span class="pill">Base64 / Hex / Bin</span>
+    </div>
+  </header>
 
   <div class="card">
-    <label for="input">Input / 密文</label>
+    <h2>Input</h2>
+    <label for="input">Ciphertext / mystery string</label>
     <textarea id="input" placeholder="Paste the mystery string here…">PBATENGHYNGVBAF LBH SBHAQ GUR XRL</textarea>
     <div class="btnrow">
       <button id="identifyBtn">🔎 Auto-identify</button>
       <button class="ghost" id="clearBtn">Clear</button>
     </div>
-    <pre class="out" id="identOut" style="display:none"></pre>
+    <pre class="out" id="identOut"></pre>
   </div>
 
   <div class="card">
     <h2>Run a cipher</h2>
     <div class="row">
-      <div style="flex:2 1 200px">
+      <div style="flex:2 1 220px">
         <label for="op">Operation</label>
         <select id="op"></select>
       </div>
@@ -81,8 +125,7 @@
         <div id="numWrap" style="display:none"><label id="numLabel" for="num">N</label><input id="num" type="number" value="1"></div>
         <div id="dirWrap" style="display:none"><label for="dir">Direction</label>
           <select id="dir"><option value="right">right</option><option value="left">left</option></select></div>
-        <div id="encWrap" style="display:none"><label>&nbsp;</label>
-          <span class="chk"><input type="checkbox" id="enc"> encrypt (default decrypt)</span></div>
+        <div id="encWrap" style="display:none"><span class="chk"><input type="checkbox" id="enc"> encrypt (default: decrypt)</span></div>
       </div>
     </div>
     <div class="btnrow"><button id="runBtn">▶ Run</button></div>
@@ -91,13 +134,15 @@
 
   <div class="card">
     <h2>Nutrimatic query link</h2>
-    <p class="hint">Type a Nutrimatic pattern (e.g. <code>"CVCVCVCVCV"</code> or <code>&lt;listen&gt;</code>); this builds the search URL. (Nutrimatic itself runs on nutrimatic.org.)</p>
-    <input id="nm" placeholder='"C*aC*eC*iC*oC*uC*yC*"'>
-    <div class="btnrow"><a id="nmLink" href="#" target="_blank" rel="noopener"><button class="ghost">↗ Open on nutrimatic.org</button></a></div>
+    <p class="hint">Type a Nutrimatic pattern (e.g. <code>"CVCVCVCVCV"</code> or <code>&lt;listen&gt;</code>) to build its search URL. Nutrimatic itself runs on nutrimatic.org.</p>
+    <div class="nmwrap">
+      <input id="nm" placeholder='"C*aC*eC*iC*oC*uC*yC*"'>
+      <a id="nmLink" href="#" target="_blank" rel="noopener"><button class="ghost">↗ Open on nutrimatic.org</button></a>
+    </div>
   </div>
 
-  <p class="foot">Static &amp; client-side. Source &amp; the Claude Code skills:
-    <a href="https://github.com/hydrangeia/nutrimatic-cipher-skills">github.com/hydrangeia/nutrimatic-cipher-skills</a></p>
+  <p class="foot">Static &amp; client-side · served from your own domain.<br>
+    Source &amp; the Claude Code skills: <a href="https://github.com/hydrangeia/nutrimatic-cipher-skills">github.com/hydrangeia/nutrimatic-cipher-skills</a></p>
 </div>
 
 <script>
@@ -302,27 +347,30 @@ function identify(text){ text=text.trim(); const L=letters(text), digits=(text.m
   return o; }
 
 // ---- UI wiring ----------------------------------------------------------
+// [name, paramSpec, group]
 const OPS=[
-  ["caesar (try all 26)", {}],
-  ["caesar shift N", {num:"shift"}],
-  ["rot13", {}], ["rot47", {}], ["atbash", {}],
-  ["affine solve", {}], ["affine a,b", {key:"a,b (e.g. 5,8)"}],
-  ["vigenere (key)", {key:"keyword", enc:true}], ["vigenere solve", {}],
-  ["substitution (26-letter key)", {key:"26-letter alphabet"}],
-  ["frequency / IC", {}],
-  ["morse decode", {}], ["morse encode", {}],
-  ["bacon decode", {}],
-  ["a1z26 decode", {}], ["a1z26 encode", {}],
-  ["polybius (5x5)", {enc:true}], ["tap decode", {}],
-  ["railfence (rails)", {num:"rails", enc:true}],
-  ["playfair (key)", {key:"keyword", enc:true}],
-  ["columnar (key)", {key:"keyword", enc:true}],
-  ["keyboard shift", {num:"shift", dir:true}],
-  ["from binary", {}], ["from hex", {}], ["from base64", {}], ["from base32", {}], ["from decimal", {}],
-  ["t9 decode", {}],
+  ["caesar (try all 26)", {}, "Monoalphabetic"],
+  ["caesar shift N", {num:"shift"}, "Monoalphabetic"],
+  ["rot13", {}, "Monoalphabetic"], ["rot47", {}, "Monoalphabetic"], ["atbash", {}, "Monoalphabetic"],
+  ["affine solve", {}, "Monoalphabetic"], ["affine a,b", {key:"a,b (e.g. 5,8)"}, "Monoalphabetic"],
+  ["substitution (26-letter key)", {key:"26-letter alphabet"}, "Monoalphabetic"],
+  ["frequency / IC", {}, "Monoalphabetic"],
+  ["vigenere (key)", {key:"keyword", enc:true}, "Polyalphabetic"], ["vigenere solve", {}, "Polyalphabetic"],
+  ["playfair (key)", {key:"keyword", enc:true}, "Grid / digraph"],
+  ["polybius (5x5)", {enc:true}, "Grid / digraph"], ["tap decode", {}, "Grid / digraph"],
+  ["railfence (rails)", {num:"rails", enc:true}, "Transposition"],
+  ["columnar (key)", {key:"keyword", enc:true}, "Transposition"],
+  ["keyboard shift", {num:"shift", dir:true}, "Transposition"],
+  ["morse decode", {}, "Symbolic / numeric"], ["morse encode", {}, "Symbolic / numeric"],
+  ["bacon decode", {}, "Symbolic / numeric"],
+  ["a1z26 decode", {}, "Symbolic / numeric"], ["a1z26 encode", {}, "Symbolic / numeric"],
+  ["from decimal", {}, "Symbolic / numeric"], ["t9 decode", {}, "Symbolic / numeric"],
+  ["from binary", {}, "Bases"], ["from hex", {}, "Bases"], ["from base64", {}, "Bases"], ["from base32", {}, "Bases"],
 ];
 const $=id=>document.getElementById(id);
-const opSel=$("op"); OPS.forEach(([n])=>{ const o=document.createElement("option"); o.value=n; o.textContent=n; opSel.appendChild(o); });
+const opSel=$("op"); let curG=null, og=null;
+OPS.forEach(([n,,g])=>{ if(g!==curG){ og=document.createElement("optgroup"); og.label=g; opSel.appendChild(og); curG=g; }
+  const o=document.createElement("option"); o.value=n; o.textContent=n; og.appendChild(o); });
 function showParams(){ const spec=OPS.find(o=>o[0]===opSel.value)[1];
   const any=spec.key||spec.num||spec.dir||spec.enc; $("params").classList.toggle("hidden",!any);
   $("keyWrap").style.display=spec.key?"":"none"; if(spec.key) $("key").placeholder=spec.key;
@@ -366,8 +414,8 @@ function run(){ const t=$("input").value; const op=opSel.value; const enc=$("enc
   $("out").textContent=r||"(no output)"; }
 
 $("runBtn").addEventListener("click",run);
-$("identifyBtn").addEventListener("click",()=>{ const o=$("identOut"); o.style.display="block"; o.textContent=identify($("input").value); });
-$("clearBtn").addEventListener("click",()=>{ $("input").value=""; $("out").textContent=""; $("identOut").style.display="none"; });
+$("identifyBtn").addEventListener("click",()=>{ $("identOut").textContent=identify($("input").value); });
+$("clearBtn").addEventListener("click",()=>{ $("input").value=""; $("out").textContent=""; $("identOut").textContent=""; });
 function updNm(){ const p=$("nm").value.trim(); $("nmLink").href = p? "https://nutrimatic.org/2024/?q="+encodeURIComponent(p) : "https://nutrimatic.org/2024/"; }
 $("nm").addEventListener("input",updNm); updNm();
 </script>
