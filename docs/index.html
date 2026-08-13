@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle Cipher Toolkit</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #1a1d27; --panel2: #232733; --fg: #e6e8ee;
+    --muted: #9aa3b2; --accent: #6ea8fe; --accent2: #7ee0b8; --border: #2b3040;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+          padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+  textarea, input, select {
+    width: 100%; background: var(--panel2); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-size: 14px; font-family: inherit;
+  }
+  textarea { min-height: 90px; resize: vertical; font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { flex: 1 1 120px; }
+  .params { margin-top: 12px; }
+  .params.hidden { display: none; }
+  button {
+    background: var(--accent); color: #08111f; border: 0; border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button.ghost { background: var(--panel2); color: var(--fg); border: 1px solid var(--border); font-weight: 500; }
+  button:hover { filter: brightness(1.08); }
+  .btnrow { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  pre.out {
+    background: #0b0d13; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px; min-height: 40px; overflow-x: auto;
+  }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg); }
+  .chk input { width: auto; }
+  a { color: var(--accent); }
+  .foot { color: var(--muted); font-size: 12px; text-align: center; margin-top: 24px; }
+  .pill { display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:999px;
+          padding:2px 10px; font-size:12px; color:var(--muted); margin:2px 4px 2px 0;}
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧩 Puzzle Cipher Toolkit</h1>
+  <p class="sub">Classic-cipher identify &amp; crack — runs entirely in your browser, nothing sent anywhere.</p>
+
+  <div class="card">
+    <label for="input">Input / 密文</label>
+    <textarea id="input" placeholder="Paste the mystery string here…">PBATENGHYNGVBAF LBH SBHAQ GUR XRL</textarea>
+    <div class="btnrow">
+      <button id="identifyBtn">🔎 Auto-identify</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+    </div>
+    <pre class="out" id="identOut" style="display:none"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Run a cipher</h2>
+    <div class="row">
+      <div style="flex:2 1 200px">
+        <label for="op">Operation</label>
+        <select id="op"></select>
+      </div>
+    </div>
+    <div class="params hidden" id="params">
+      <div class="row">
+        <div id="keyWrap" style="display:none"><label for="key">Key / keyword</label><input id="key" placeholder="keyword"></div>
+        <div id="numWrap" style="display:none"><label id="numLabel" for="num">N</label><input id="num" type="number" value="1"></div>
+        <div id="dirWrap" style="display:none"><label for="dir">Direction</label>
+          <select id="dir"><option value="right">right</option><option value="left">left</option></select></div>
+        <div id="encWrap" style="display:none"><label>&nbsp;</label>
+          <span class="chk"><input type="checkbox" id="enc"> encrypt (default decrypt)</span></div>
+      </div>
+    </div>
+    <div class="btnrow"><button id="runBtn">▶ Run</button></div>
+    <pre class="out" id="out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Nutrimatic query link</h2>
+    <p class="hint">Type a Nutrimatic pattern (e.g. <code>"CVCVCVCVCV"</code> or <code>&lt;listen&gt;</code>); this builds the search URL. (Nutrimatic itself runs on nutrimatic.org.)</p>
+    <input id="nm" placeholder='"C*aC*eC*iC*oC*uC*yC*"'>
+    <div class="btnrow"><a id="nmLink" href="#" target="_blank" rel="noopener"><button class="ghost">↗ Open on nutrimatic.org</button></a></div>
+  </div>
+
+  <p class="foot">Static &amp; client-side. Source &amp; the Claude Code skills:
+    <a href="https://github.com/hydrangeia/nutrimatic-cipher-skills">github.com/hydrangeia/nutrimatic-cipher-skills</a></p>
+</div>
+
+<script>
+"use strict";
+// ---- English scoring ----------------------------------------------------
+const FREQ = {a:.0817,b:.015,c:.0278,d:.0425,e:.127,f:.0223,g:.0202,h:.0609,i:.0697,j:.0015,
+  k:.0077,l:.0403,m:.0241,n:.0675,o:.0751,p:.0193,q:.001,r:.0599,s:.0633,t:.0906,u:.0276,
+  v:.0098,w:.0236,x:.0015,y:.0197,z:.0007};
+const letters = s => (s.toLowerCase().match(/[a-z]/g) || []);
+function chi2(s){ const L=letters(s), n=L.length; if(!n) return Infinity;
+  const c={}; L.forEach(x=>c[x]=(c[x]||0)+1); let t=0;
+  for(const k in FREQ){ const e=FREQ[k]*n; t+=Math.pow((c[k]||0)-e,2)/e; } return t; }
+function ic(s){ const L=letters(s), n=L.length; if(n<2) return 0;
+  const c={}; L.forEach(x=>c[x]=(c[x]||0)+1); let s2=0; for(const k in c) s2+=c[k]*(c[k]-1);
+  return s2/(n*(n-1)); }
+const mod=(a,b)=>((a%b)+b)%b;
+
+// ---- Monoalphabetic -----------------------------------------------------
+function shift(text,k){ return text.replace(/[a-z]/gi,ch=>{
+  const base = ch<='Z'?65:97; return String.fromCharCode(mod(ch.charCodeAt(0)-base+k,26)+base); }); }
+function caesarAll(text){ const r=[]; for(let k=0;k<26;k++){ const d=shift(text,-k); r.push([chi2(d),k,d]); }
+  r.sort((a,b)=>a[0]-b[0]);
+  return r.map(([sc,k,d],i)=>`shift ${String(k).padStart(2)} (chi2 ${sc.toFixed(1).padStart(7)}): ${d}${i===0?'   <-- best':''}`).join("\n"); }
+function atbash(text){ return text.replace(/[a-z]/gi,ch=>{ const up=ch<='Z';
+  const b=up?65:97; return String.fromCharCode((up?90:122)-(ch.charCodeAt(0)-b)); }); }
+function rot47(text){ let o=""; for(const ch of text){ const c=ch.charCodeAt(0);
+  o += (c>=33&&c<=126)? String.fromCharCode(33+mod(c-33+47,94)) : ch; } return o; }
+
+// ---- Affine -------------------------------------------------------------
+const COP=[1,3,5,7,9,11,15,17,19,21,23,25];
+function inv(a){ for(let x=1;x<26;x++) if(mod(a*x,26)===1) return x; return 1; }
+function affineDec(text,a,b){ const ai=inv(a); return letters(text).map(c=>
+  String.fromCharCode(mod(ai*((c.charCodeAt(0)-97)-b),26)+97)).join(""); }
+function affineEnc(text,a,b){ return letters(text).map(c=>
+  String.fromCharCode(mod(a*(c.charCodeAt(0)-97)+b,26)+97)).join(""); }
+function affineSolve(text){ const r=[]; for(const a of COP) for(let b=0;b<26;b++){ const d=affineDec(text,a,b);
+  r.push([chi2(d),a,b,d]); } r.sort((x,y)=>x[0]-y[0]);
+  return r.slice(0,6).map(([s,a,b,d])=>`a=${String(a).padStart(2)} b=${String(b).padStart(2)} (chi2 ${s.toFixed(1)}): ${d}`).join("\n"); }
+
+// ---- Vigenere -----------------------------------------------------------
+function vigDec(text,key){ const k=[...key.toLowerCase()].filter(c=>/[a-z]/.test(c)).map(c=>c.charCodeAt(0)-97);
+  if(!k.length) return ""; let i=0; return letters(text).map(c=>
+  String.fromCharCode(mod((c.charCodeAt(0)-97)-k[(i++)%k.length],26)+97)).join(""); }
+function vigEnc(text,key){ const k=[...key.toLowerCase()].filter(c=>/[a-z]/.test(c)).map(c=>c.charCodeAt(0)-97);
+  if(!k.length) return ""; let i=0; return letters(text).map(c=>
+  String.fromCharCode(mod((c.charCodeAt(0)-97)+k[(i++)%k.length],26)+97)).join(""); }
+function bestShift(col){ let bk=0,bs=Infinity; for(let k=0;k<26;k++){
+  const d=col.map(c=>String.fromCharCode(mod((c.charCodeAt(0)-97)-k,26)+97)).join(""); const s=chi2(d);
+  if(s<bs){bs=s;bk=k;} } return bk; }
+function vigSolve(text){ const L=letters(text); const maxlen=Math.min(20,Math.floor(L.length/2)||1);
+  const ranked=[]; for(let n=1;n<=maxlen;n++){ const ics=[];
+    for(let i=0;i<n;i++){ const col=L.filter((_,j)=>j%n===i); if(col.length>1) ics.push(ic(col.join(""))); }
+    ranked.push([ics.reduce((a,b)=>a+b,0)/(ics.length||1), n]); }
+  ranked.sort((a,b)=>b[0]-a[0]);
+  let out="Likely key lengths (avg column IC, English mono ~0.066):\n";
+  ranked.slice(0,6).forEach(([v,n])=>out+=`  len ${String(n).padStart(2)}: IC ${v.toFixed(4)}\n`);
+  out+="\n";
+  ranked.slice(0,3).forEach(([,n])=>{ const cols=[]; for(let i=0;i<n;i++) cols.push(L.filter((_,j)=>j%n===i));
+    const key=cols.map(c=>String.fromCharCode(bestShift(c)+97)).join(""); const d=vigDec(text,key);
+    out+=`key len ${n} -> key '${key}' (chi2 ${chi2(d).toFixed(1)}): ${d}\n`; });
+  return out.trim(); }
+
+// ---- Substitution / freq ------------------------------------------------
+function substitution(text,key){ key=key.toLowerCase(); if(key.length!==26) return "key must be exactly 26 letters";
+  const map={}; for(let i=0;i<26;i++) map[String.fromCharCode(97+i)]=key[i];
+  return text.replace(/[a-z]/gi,ch=>{ const low=ch.toLowerCase(); const m=map[low]||ch;
+    return ch<='Z'?m.toUpperCase():m; }); }
+function freq(text){ const L=letters(text), n=L.length, c={}; L.forEach(x=>c[x]=(c[x]||0)+1);
+  const rows=Object.entries(c).sort((a,b)=>b[1]-a[1]);
+  let o=`letters ${n}  unique ${rows.length}  IC ${ic(text).toFixed(4)} (English ~0.0667, random ~0.0385)\n`;
+  rows.forEach(([ch,v])=>{ const p=100*v/n; o+=`  ${ch}: ${String(v).padStart(4)}  ${p.toFixed(1).padStart(5)}%  ${"#".repeat(Math.round(p))}\n`; });
+  return o.trim(); }
+
+// ---- Morse --------------------------------------------------------------
+const MORSE={a:".-",b:"-...",c:"-.-.",d:"-..",e:".",f:"..-.",g:"--.",h:"....",i:"..",j:".---",
+  k:"-.-",l:".-..",m:"--",n:"-.",o:"---",p:".--.",q:"--.-",r:".-.",s:"...",t:"-",u:"..-",v:"...-",
+  w:".--",x:"-..-",y:"-.--",z:"--..","0":"-----","1":".----","2":"..---","3":"...--","4":"....-",
+  "5":".....","6":"-....","7":"--...","8":"---..","9":"----."};
+const MREV=Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
+function morseDec(text){ text=text.replace(/\|/g,"/").replace(/ {2}/g," / ");
+  return text.split("/").map(w=>w.trim().split(/\s+/).filter(Boolean).map(t=>MREV[t]||"?").join("")).filter(Boolean).join(" "); }
+function morseEnc(text){ return [...text.toLowerCase()].map(c=>c===" "?"/":(MORSE[c]||"")).filter(Boolean).join(" "); }
+
+// ---- Baconian -----------------------------------------------------------
+function bacon(text){ const bits=[...text].filter(c=>!/\s/.test(c)).map(c=>
+  "Aa0".includes(c)?"A":("Bb1".includes(c)?"B":"")).join("");
+  const g=[]; for(let i=0;i+5<=bits.length;i+=5) g.push(bits.slice(i,i+5));
+  const m26={}, seq26="abcdefghijklmnopqrstuvwxyz";
+  for(let i=0;i<26;i++) m26[i.toString(2).padStart(5,"0").replace(/0/g,"A").replace(/1/g,"B")]=seq26[i];
+  const m24={}, seq24="abcdefghiklmnopqrstuwxyz"; // i=j, u=v collapsed (24)
+  for(let i=0;i<24;i++) m24[i.toString(2).padStart(5,"0").replace(/0/g,"A").replace(/1/g,"B")]=seq24[i];
+  const dec=map=>g.map(x=>map[x]||"?").join("");
+  return `bits ${bits.length}, ${g.length} groups\n26-letter: ${dec(m26)}\n24-letter (classic i=j,u=v): ${dec(m24)}`; }
+
+// ---- A1Z26 / numbers ----------------------------------------------------
+function a1z26Dec(text){ return (text.match(/\d+/g)||[]).map(n=>{ const v=+n;
+  return (v>=1&&v<=26)?String.fromCharCode(96+v):"?"; }).join(""); }
+function a1z26Enc(text){ return letters(text).map(c=>c.charCodeAt(0)-96).join(" "); }
+function fromDec(text){ return (text.match(/\d+/g)||[]).map(n=>+n).filter(n=>n>0&&n<0x110000).map(n=>String.fromCharCode(n)).join(""); }
+
+// ---- Polybius / tap -----------------------------------------------------
+function buildSquare(alpha){ const size=Math.round(Math.sqrt(alpha.length)); const pos={},rev={};
+  for(let i=0;i<alpha.length;i++){ const r=Math.floor(i/size)+1, c=i%size+1; pos[alpha[i]]=[r,c]; rev[r+","+c]=alpha[i]; }
+  return {pos,rev,size}; }
+function polybius(text,enc,square){ const alpha=(square||"abcdefghiklmnopqrstuvwxyz").toLowerCase();
+  const {pos,rev,size}=buildSquare(alpha);
+  if(enc){ return [...text.toLowerCase()].map(c=>{ let cc=(c==="j"&&!pos["j"])?"i":c;
+    return pos[cc]?pos[cc].join(""):""; }).filter(Boolean).join(" "); }
+  const d=(text.match(new RegExp("[1-"+size+"]","g"))||[]); let o="";
+  for(let i=0;i+2<=d.length;i+=2) o+=rev[d[i]+","+d[i+1]]||"?"; return o; }
+function tap(text){ const alpha="abcdefghijlmnopqrstuvwxyz"; const {rev}=buildSquare(alpha);
+  const v=(text.match(/[1-5]/g)||[]).map(Number); let o="";
+  for(let i=0;i+2<=v.length;i+=2) o+=rev[v[i]+","+v[i+1]]||"?"; return o; }
+
+// ---- Rail fence ---------------------------------------------------------
+function railPattern(len,n){ const p=[]; let r=0,d=1; for(let i=0;i<len;i++){ p.push(r);
+  if(r===0)d=1; else if(r===n-1)d=-1; r+=d; } return p; }
+function railEnc(text,n,strip){ let s=strip?text.replace(/\s+/g,""):text; if(n<2) return s;
+  const rows=Array.from({length:n},()=>""); const p=railPattern(s.length,n);
+  for(let i=0;i<s.length;i++) rows[p[i]]+=s[i]; return rows.join(""); }
+function railDec(text,n,strip){ let s=strip?text.replace(/\s+/g,""):text; if(n<2) return s;
+  const p=railPattern(s.length,n); const cnt={}; p.forEach(r=>cnt[r]=(cnt[r]||0)+1);
+  const rails={}; let pos=0; for(let r=0;r<n;r++){ rails[r]=s.slice(pos,pos+(cnt[r]||0)).split(""); pos+=cnt[r]||0; }
+  return p.map(r=>rails[r].shift()).join(""); }
+
+// ---- Playfair -----------------------------------------------------------
+function buildPlayfair(key){ const seen=[]; for(const ch0 of (key+"abcdefghiklmnopqrstuvwxyz").toLowerCase()){
+  let ch=ch0==="j"?"i":ch0; if(/[a-z]/.test(ch)&&!seen.includes(ch)) seen.push(ch); }
+  const pos={},grid={}; seen.forEach((c,i)=>{ pos[c]=[Math.floor(i/5),i%5]; grid[Math.floor(i/5)+","+(i%5)]=c; });
+  return {pos,grid}; }
+function playfairDigraphs(text){ const L=[...text.toLowerCase()].filter(c=>/[a-z]/.test(c)).map(c=>c==="j"?"i":c);
+  const pairs=[]; let i=0; while(i<L.length){ const a=L[i]; let b=(i+1<L.length)?L[i+1]:"x";
+    if(a===b){ b="x"; i++; } else i+=2; pairs.push([a,b]); } return pairs; }
+function playfair(text,key,enc){ const {pos,grid}=buildPlayfair(key); const step=enc?1:-1; let o="";
+  for(const [a,b] of playfairDigraphs(text)){ const [ra,ca]=pos[a],[rb,cb]=pos[b];
+    if(ra===rb){ o+=grid[ra+","+mod(ca+step,5)]+grid[rb+","+mod(cb+step,5)]; }
+    else if(ca===cb){ o+=grid[mod(ra+step,5)+","+ca]+grid[mod(rb+step,5)+","+cb]; }
+    else { o+=grid[ra+","+cb]+grid[rb+","+ca]; } } return o; }
+
+// ---- Columnar -----------------------------------------------------------
+function colOrder(key){ return [...key.toLowerCase()].map((c,i)=>[c,i]).sort((a,b)=>
+  a[0]<b[0]?-1:a[0]>b[0]?1:a[1]-b[1]).map(x=>x[1]); }
+function columnar(text,key,enc,strip){ if(strip) text=text.replace(/\s+/g,"");
+  const ncol=key.length, order=colOrder(key);
+  if(enc){ const cols=Array.from({length:ncol},()=>""); for(let i=0;i<text.length;i++) cols[i%ncol]+=text[i];
+    return order.map(c=>cols[c]).join(""); }
+  const n=text.length, nrow=Math.ceil(n/ncol), extra=n%ncol; const len={};
+  for(let c=0;c<ncol;c++) len[c]=(extra===0||c<extra)?nrow:nrow-1;
+  const cols={}; let p=0; for(const c of order){ cols[c]=text.slice(p,p+len[c]); p+=len[c]; }
+  let o=""; for(let r=0;r<nrow;r++) for(let c=0;c<ncol;c++) if(r<cols[c].length) o+=cols[c][r]; return o; }
+
+// ---- Keyboard -----------------------------------------------------------
+const KROWS=["qwertyuiop","asdfghjkl","zxcvbnm"]; const KPOS={};
+KROWS.forEach((row,r)=>[...row].forEach((c,i)=>KPOS[c]=[r,i]));
+function keyboard(text,shiftN,dir){ const delta=(dir==="left"?-1:1)*shiftN;
+  return text.replace(/[a-z]/gi,ch=>{ const low=ch.toLowerCase(); const p=KPOS[low]; if(!p) return ch;
+    const row=KROWS[p[0]]; const m=row[mod(p[1]+delta,row.length)]; return ch<='Z'?m.toUpperCase():m; }); }
+
+// ---- Bases --------------------------------------------------------------
+function fromBin(text){ let chunks=text.match(/[01]+/g)||[];
+  if(chunks.length===1 && chunks[0].length%8===0) chunks=chunks[0].match(/.{8}/g);
+  return chunks.map(b=>String.fromCharCode(parseInt(b,2))).join(""); }
+function fromHex(text){ let h=(text.match(/[0-9a-f]/gi)||[]).join(""); if(h.length%2) h=h.slice(0,-1);
+  let o=""; for(let i=0;i<h.length;i+=2) o+=String.fromCharCode(parseInt(h.substr(i,2),16)); return o; }
+function fromB64(text){ try{ return atob(text.replace(/\s+/g,"")); }catch(e){ return "invalid base64"; } }
+function fromB32(text){ const A="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; text=text.replace(/\s+/g,"").replace(/=+$/,"").toUpperCase();
+  let bits="",out=""; for(const c of text){ const v=A.indexOf(c); if(v<0) continue; bits+=v.toString(2).padStart(5,"0"); }
+  for(let i=0;i+8<=bits.length;i+=8) out+=String.fromCharCode(parseInt(bits.substr(i,8),2)); return out; }
+const T9={2:"abc",3:"def",4:"ghi",5:"jkl",6:"mno",7:"pqrs",8:"tuv",9:"wxyz"};
+function t9(text){ return text.trim().split(/[ ,\-/]+/).map(g=>{ if(!g) return "";
+  if(/^0+$/.test(g)) return " "; const d=g[0]; if(T9[d]&&[...g].every(x=>x===d)){ const s=T9[d]; return s[(g.length-1)%s.length]; }
+  return "?"; }).join(""); }
+
+// ---- Identify -----------------------------------------------------------
+function identify(text){ text=text.trim(); const L=letters(text), digits=(text.match(/\d/g)||[]);
+  const uniq=new Set([...text].filter(c=>!/\s/.test(c))), uL=new Set(L); const co=ic(L.join(""));
+  let o="============================================================\n";
+  o+=`length ${text.length}  letters ${L.length}  digits ${digits.length}\n`;
+  o+=`unique symbols ${uniq.size}: ${[...uniq].sort().join("").slice(0,50)}\n`;
+  o+=`index of coincidence: ${co.toFixed(4)}  (English ~0.0667 | polyalphabetic/random ~0.0385)\n`;
+  o+="============================================================\n";
+  const sug=[]; const nums=text.match(/\d+/g)||[];
+  const only=(set)=>[...uniq].every(c=>set.has(c));
+  if(only(new Set("01"))&&digits.length>=8) sug.push(["Binary","from binary",5]);
+  if(uL.size===2&&L.length>=10) sug.push(["Baconian (2-symbol, 5-bit)","bacon decode",5]);
+  if(only(new Set(".-/|_ "))&&(uniq.has(".")||uniq.has("-"))) sug.push(["Morse","morse decode",5]);
+  if([...uL].every(c=>"abcdef".includes(c))&&digits.length&&uniq.size>2) sug.push(["Hex","from hex",4]);
+  if(digits.length&&!L.length){
+    if(nums.length&&nums.every(n=>+n<=26)) sug.push(["A1Z26","a1z26 decode",4]);
+    if([...digits.join("")].every(c=>"12345".includes(c))) sug.push(["Polybius / Tap code","polybius decode / tap decode",4]);
+    const mx=Math.max(...nums.map(Number),0); if(mx>=32&&mx<=126) sug.push(["Decimal ASCII","from decimal",3]);
+  }
+  if(/^[A-Za-z0-9+/=\s]+$/.test(text)&&uL.size>6&&/[A-Z]/.test(text)&&/[a-z]/.test(text)) sug.push(["Base64","from base64",2]);
+  if(L.length&&uL.size>2){ sug.push(["Caesar / ROT / Atbash — cheap, try first","caesar (try all 26)",4]);
+    if(co>=0.055) sug.push(["Monoalphabetic substitution (IC near English)","frequency / affine solve",5]);
+    if(co<=0.052) sug.push(["Polyalphabetic / Vigenere (low IC, wants 150+ chars)","vigenere solve",5]);
+    if((co>0.052&&co<0.055)||L.length<80) sug.push(["IC inconclusive / short — try both mono & poly","caesar all AND vigenere solve",3]); }
+  sug.sort((a,b)=>b[2]-a[2]);
+  if(!sug.length){ o+="No strong signal. Try caesar (all), atbash, vigenere solve, frequency."; return o; }
+  o+="Suggestions (most likely first):\n";
+  sug.forEach((s,i)=>{ o+=`  ${i+1}. ${s[0]}\n       -> ${s[1]}\n`; });
+  return o; }
+
+// ---- UI wiring ----------------------------------------------------------
+const OPS=[
+  ["caesar (try all 26)", {}],
+  ["caesar shift N", {num:"shift"}],
+  ["rot13", {}], ["rot47", {}], ["atbash", {}],
+  ["affine solve", {}], ["affine a,b", {key:"a,b (e.g. 5,8)"}],
+  ["vigenere (key)", {key:"keyword", enc:true}], ["vigenere solve", {}],
+  ["substitution (26-letter key)", {key:"26-letter alphabet"}],
+  ["frequency / IC", {}],
+  ["morse decode", {}], ["morse encode", {}],
+  ["bacon decode", {}],
+  ["a1z26 decode", {}], ["a1z26 encode", {}],
+  ["polybius (5x5)", {enc:true}], ["tap decode", {}],
+  ["railfence (rails)", {num:"rails", enc:true}],
+  ["playfair (key)", {key:"keyword", enc:true}],
+  ["columnar (key)", {key:"keyword", enc:true}],
+  ["keyboard shift", {num:"shift", dir:true}],
+  ["from binary", {}], ["from hex", {}], ["from base64", {}], ["from base32", {}], ["from decimal", {}],
+  ["t9 decode", {}],
+];
+const $=id=>document.getElementById(id);
+const opSel=$("op"); OPS.forEach(([n])=>{ const o=document.createElement("option"); o.value=n; o.textContent=n; opSel.appendChild(o); });
+function showParams(){ const spec=OPS.find(o=>o[0]===opSel.value)[1];
+  const any=spec.key||spec.num||spec.dir||spec.enc; $("params").classList.toggle("hidden",!any);
+  $("keyWrap").style.display=spec.key?"":"none"; if(spec.key) $("key").placeholder=spec.key;
+  $("numWrap").style.display=spec.num?"":"none"; if(spec.num) $("numLabel").textContent=spec.num;
+  $("dirWrap").style.display=spec.dir?"":"none";
+  $("encWrap").style.display=spec.enc?"":"none"; }
+opSel.addEventListener("change",showParams); showParams();
+
+function run(){ const t=$("input").value; const op=opSel.value; const enc=$("enc").checked;
+  const key=$("key").value; const num=parseInt($("num").value)||0; const dir=$("dir").value; let r="";
+  try{ switch(op){
+    case "caesar (try all 26)": r=caesarAll(t); break;
+    case "caesar shift N": r=shift(t,num); break;
+    case "rot13": r=shift(t,13); break;
+    case "rot47": r=rot47(t); break;
+    case "atbash": r=atbash(t); break;
+    case "affine solve": r=affineSolve(t); break;
+    case "affine a,b": { const [a,b]=key.split(/[,\s]+/).map(Number); r=enc?affineEnc(t,a,b):affineDec(t,a,b); } break;
+    case "vigenere (key)": r=enc?vigEnc(t,key):vigDec(t,key); break;
+    case "vigenere solve": r=vigSolve(t); break;
+    case "substitution (26-letter key)": r=substitution(t,key); break;
+    case "frequency / IC": r=freq(t); break;
+    case "morse decode": r=morseDec(t); break;
+    case "morse encode": r=morseEnc(t); break;
+    case "bacon decode": r=bacon(t); break;
+    case "a1z26 decode": r=a1z26Dec(t); break;
+    case "a1z26 encode": r=a1z26Enc(t); break;
+    case "polybius (5x5)": r=polybius(t,enc); break;
+    case "tap decode": r=tap(t); break;
+    case "railfence (rails)": r=enc?railEnc(t,num,true):railDec(t,num,false); break;
+    case "playfair (key)": r=playfair(t,key,enc); break;
+    case "columnar (key)": r=columnar(t,key,enc,true); break;
+    case "keyboard shift": r=keyboard(t,num,dir); break;
+    case "from binary": r=fromBin(t); break;
+    case "from hex": r=fromHex(t); break;
+    case "from base64": r=fromB64(t); break;
+    case "from base32": r=fromB32(t); break;
+    case "from decimal": r=fromDec(t); break;
+    case "t9 decode": r=t9(t); break;
+  } }catch(e){ r="error: "+e.message; }
+  $("out").textContent=r||"(no output)"; }
+
+$("runBtn").addEventListener("click",run);
+$("identifyBtn").addEventListener("click",()=>{ const o=$("identOut"); o.style.display="block"; o.textContent=identify($("input").value); });
+$("clearBtn").addEventListener("click",()=>{ $("input").value=""; $("out").textContent=""; $("identOut").style.display="none"; });
+function updNm(){ const p=$("nm").value.trim(); $("nmLink").href = p? "https://nutrimatic.org/2024/?q="+encodeURIComponent(p) : "https://nutrimatic.org/2024/"; }
+$("nm").addEventListener("input",updNm); updNm();
+</script>
+</body>
+</html>
